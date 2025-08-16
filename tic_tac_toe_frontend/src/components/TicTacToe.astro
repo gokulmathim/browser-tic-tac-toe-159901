@@ -173,7 +173,7 @@ const startingPlayer = (import.meta.env.PUBLIC_STARTING_PLAYER || 'X').toUpperCa
   }
 </style>
 
-<script>
+<script define:vars={{ startingPlayer }}>
   // Minimalistic Tic Tac Toe logic with localStorage persistence
   (function () {
     const STORAGE_KEY = 'ttt_state_v1';

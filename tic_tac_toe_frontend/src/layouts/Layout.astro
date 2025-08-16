@@ -16,6 +16,13 @@ const accent = import.meta.env.PUBLIC_ACCENT_COLOR || '#f44336';
     <title>{siteTitle}</title>
   </head>
   <body>
+    <script>
+      try {
+        if (localStorage.getItem('theme') === 'dark') {
+          document.body.classList.add('dark-theme');
+        }
+      } catch {}
+    </script>
     <ThemeToggle />
     <slot />
     <script>
