@@ -1,0 +1,323 @@
+---
+/*
+  TicTacToe.astro
+  A minimalistic, self-contained Tic Tac Toe game using only browser state and localStorage.
+  - 3x3 centered board with buttons
+  - Player turn indicator
+  - Game over/draw detection
+  - Restart & New Game buttons
+  - Uses CSS variables for primary/secondary/accent colors (set in Layout)
+  - Optional env PUBLIC_STARTING_PLAYER to define initial player (defaults to 'X')
+*/
+const startingPlayer = (import.meta.env.PUBLIC_STARTING_PLAYER || 'X').toUpperCase() === 'O' ? 'O' : 'X';
+// Note: Board and interactivity are handled via client-side script below.
+---
+
+<section class="ttt-app">
+  <header class="app-header">
+    <h1 class="title" id="app-title">{import.meta.env.PUBLIC_APP_TITLE || 'Tic Tac Toe'}</h1>
+    <p class="status" id="status" role="status" aria-live="polite">
+      Loading…
+    </p>
+  </header>
+
+  <div class="board-wrapper">
+    <div class="board" id="board" role="grid" aria-label="Tic Tac Toe board" aria-describedby="status">
+      <button class="cell" data-index="0" role="gridcell" aria-label="Cell 1, empty"></button>
+      <button class="cell" data-index="1" role="gridcell" aria-label="Cell 2, empty"></button>
+      <button class="cell" data-index="2" role="gridcell" aria-label="Cell 3, empty"></button>
+      <button class="cell" data-index="3" role="gridcell" aria-label="Cell 4, empty"></button>
+      <button class="cell" data-index="4" role="gridcell" aria-label="Cell 5, empty"></button>
+      <button class="cell" data-index="5" role="gridcell" aria-label="Cell 6, empty"></button>
+      <button class="cell" data-index="6" role="gridcell" aria-label="Cell 7, empty"></button>
+      <button class="cell" data-index="7" role="gridcell" aria-label="Cell 8, empty"></button>
+      <button class="cell" data-index="8" role="gridcell" aria-label="Cell 9, empty"></button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="restart-btn" class="btn primary" aria-label="Restart current game">Restart</button>
+    <button id="newgame-btn" class="btn secondary" aria-label="Start a new game">New Game</button>
+  </div>
+</section>
+
+<style>
+  .ttt-app {
+    min-height: calc(100dvh - 40px);
+    padding: 20px 16px 24px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    justify-items: center;
+  }
+
+  .app-header {
+    text-align: center;
+  }
+
+  .title {
+    margin: 0 0 8px 0;
+    font-size: 1.75rem;
+    color: var(--text-color);
+    letter-spacing: 0.02em;
+  }
+
+  .status {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 1rem;
+  }
+
+  .board-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: min(92vw, 420px);
+  }
+
+  .board {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    background: var(--card-bg);
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px var(--shadow-color);
+  }
+
+  .cell {
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    color: var(--text-color);
+    font-size: clamp(2.2rem, 9vw, 3rem);
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: transform 0.05s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 1px 3px var(--shadow-color);
+  }
+
+  .cell:hover {
+    background: color-mix(in oklab, var(--secondary) 12%, white);
+    border-color: color-mix(in oklab, var(--secondary) 38%, var(--border-color));
+  }
+
+  .cell:active {
+    transform: scale(0.98);
+  }
+
+  .cell[disabled] {
+    cursor: not-allowed;
+    opacity: 0.9;
+  }
+
+  .cell.winning {
+    outline: 2px solid var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 18%, transparent);
+    background: color-mix(in oklab, var(--accent) 12%, white);
+  }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .btn {
+    appearance: none;
+    border: 1px solid var(--border-color);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.05s ease;
+    box-shadow: 0 1px 2px var(--shadow-color);
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px var(--shadow-hover-color);
+  }
+
+  .btn.primary {
+    color: white;
+    background: var(--primary);
+    border-color: color-mix(in oklab, var(--primary) 85%, black);
+  }
+  .btn.primary:hover {
+    background: color-mix(in oklab, var(--primary) 92%, black);
+  }
+
+  .btn.secondary {
+    color: var(--primary);
+    background: color-mix(in oklab, var(--secondary) 20%, white);
+    border-color: color-mix(in oklab, var(--secondary) 45%, var(--border-color));
+  }
+  .btn.secondary:hover {
+    background: color-mix(in oklab, var(--secondary) 30%, white);
+  }
+
+  /* Fallbacks in case color-mix is unsupported */
+  @supports not (color: color-mix(in oklab, white, black)) {
+    .cell:hover { background: #f7fbff; }
+    .btn.primary:hover { filter: brightness(0.95); }
+    .btn.secondary { background: #eef6ff; }
+    .btn.secondary:hover { background: #e3f0ff; }
+  }
+</style>
+
+<script define:vars={{ startingPlayer }}>
+  // Minimalistic Tic Tac Toe logic with localStorage persistence
+  (function () {
+    const STORAGE_KEY = 'ttt_state_v1';
+
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const restartBtn = document.getElementById('restart-btn');
+    const newGameBtn = document.getElementById('newgame-btn');
+
+    /** Load state from storage or initialize a new one */
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          // Basic validation and sanitize
+          if (Array.isArray(parsed.board) && parsed.board.length === 9) {
+            return {
+              board: parsed.board.map((v) => (v === 'X' || v === 'O' ? v : '')),
+              current: parsed.current === 'O' ? 'O' : 'X',
+              gameOver: !!parsed.gameOver,
+              winner: parsed.winner === 'O' ? 'O' : parsed.winner === 'X' ? 'X' : null,
+              winningLine: Array.isArray(parsed.winningLine) ? parsed.winningLine : null,
+              startingPlayer: parsed.startingPlayer === 'O' ? 'O' : 'X',
+              moves: Number.isFinite(parsed.moves) ? parsed.moves : 0,
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse stored state; reinitializing.', e);
+      }
+      return newState(startingPlayer);
+    }
+
+    /** Create a fresh state object */
+    function newState(startPlayer) {
+      return {
+        board: Array(9).fill(''),
+        current: startPlayer || 'X',
+        gameOver: false,
+        winner: null,
+        winningLine: null,
+        startingPlayer: startPlayer || 'X',
+        moves: 0,
+      };
+    }
+
+    /** Persist state */
+    function saveState(state) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch {
+        // Ignore storage errors to not affect gameplay
+      }
+    }
+
+    /** Check for a winner; return indices if found, else null */
+    function checkWin(board) {
+      const wins = [
+        [0,1,2],[3,4,5],[6,7,8], // rows
+        [0,3,6],[1,4,7],[2,5,8], // cols
+        [0,4,8],[2,4,6]          // diagonals
+      ];
+      for (const [a,b,c] of wins) {
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          return [a,b,c];
+        }
+      }
+      return null;
+    }
+
+    /** Update UI based on state */
+    function render(state) {
+      const cells = boardEl.querySelectorAll('.cell');
+      cells.forEach((btn, idx) => {
+        const val = state.board[idx] || '';
+        btn.textContent = val;
+        btn.setAttribute('aria-label', `Cell ${idx + 1}, ${val ? val : 'empty'}`);
+        btn.disabled = !!val || state.gameOver;
+        btn.classList.toggle('winning', state.winningLine?.includes(idx));
+      });
+
+      if (state.gameOver) {
+        if (state.winner) {
+          statusEl.textContent = `Player ${state.winner} wins!`;
+        } else {
+          statusEl.textContent = 'Draw game.';
+        }
+      } else {
+        statusEl.textContent = `Player ${state.current}'s turn`;
+      }
+    }
+
+    /** Handle cell interaction */
+    function onCellClick(e) {
+      const btn = e.target.closest('.cell');
+      if (!btn) return;
+      const idx = Number(btn.dataset.index);
+      if (!Number.isInteger(idx)) return;
+
+      if (state.gameOver || state.board[idx]) return;
+
+      state.board[idx] = state.current;
+      state.moves += 1;
+
+      const winLine = checkWin(state.board);
+      if (winLine) {
+        state.gameOver = true;
+        state.winner = state.current;
+        state.winningLine = winLine;
+      } else if (state.moves >= 9) {
+        state.gameOver = true;
+        state.winner = null;
+        state.winningLine = null;
+      } else {
+        state.current = state.current === 'X' ? 'O' : 'X';
+      }
+
+      saveState(state);
+      render(state);
+    }
+
+    /** Restart current game with same starting player */
+    function restartGame() {
+      state = newState(state.startingPlayer);
+      saveState(state);
+      render(state);
+    }
+
+    /** New game: alternate starting player for fairness */
+    function newGame() {
+      const nextStarter = state.startingPlayer === 'X' ? 'O' : 'X';
+      state = newState(nextStarter);
+      saveState(state);
+      render(state);
+    }
+
+    // Initialize
+    let state = loadState();
+    render(state);
+
+    // Listeners
+    boardEl.addEventListener('click', onCellClick);
+    restartBtn.addEventListener('click', restartGame);
+    newGameBtn.addEventListener('click', newGame);
+  })();
+</script>
